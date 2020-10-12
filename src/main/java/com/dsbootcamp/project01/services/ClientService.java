@@ -1,8 +1,6 @@
 package com.dsbootcamp.project01.services;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import javax.persistence.EntityNotFoundException;
 
@@ -27,23 +25,23 @@ public class ClientService {
 	private ClientRepository repository;
 	
 	@Transactional(readOnly = true)
-	public List<ClientDTO> findAll() {
-		List<Client> list = repository.findAll();
-		
-		return list.stream().map(x -> new ClientDTO(x)).collect(Collectors.toList());		
+	public Page<ClientDTO> findAllPaged(PageRequest pageRequest) {
+		Page<Client> list = repository.findAll(pageRequest);
+		return list.map(x -> new ClientDTO(x));
 	}
-
+	
+	
 	@Transactional(readOnly = true)
 	public ClientDTO findById(Long id) {
 		Optional<Client> obj = repository.findById(id);
-		Client entity = obj.orElseThrow(() -> new EntityNotFoundException("Categoria não encontrada!"));
+		Client entity = obj.orElseThrow(() -> new ResourceNotFoundException("Cliente com o id: " + id + " não encontrado!"));
 		return new ClientDTO(entity);
 	}
 
 	@Transactional
 	public ClientDTO insert(ClientDTO dto) {
 		Client entity = new Client();
-		entity.setName(dto.getName());
+		copyDtoToEntity(dto, entity);
 		entity = repository.save(entity);
 		return new ClientDTO(entity);
 	}
@@ -52,12 +50,12 @@ public class ClientService {
 	public ClientDTO update(Long id, ClientDTO dto) {
 		try{
 			Client entity = repository.getOne(id);
-			entity.setName(dto.getName());
+			copyDtoToEntity(dto, entity);
 			entity = repository.save(entity);
 			return new ClientDTO(entity);
 		}
 		catch (EntityNotFoundException e) {
-			throw new ResourceNotFoundException("Categoria com o id: " + id + " não encontrada!");
+			throw new ResourceNotFoundException("Cliente com o id: " + id + " não encontrado!");
 		}
 		
 	}
@@ -67,16 +65,18 @@ public class ClientService {
 			repository.deleteById(id);
 		}
 		catch(EmptyResultDataAccessException e) {
-			throw new ResourceNotFoundException("Categoria com o id: " + id + " não encontrada!");
+			throw new ResourceNotFoundException("Cliente com o id: " + id + " não encontrado!");
 		}
 		catch(DataIntegrityViolationException e) {
-			throw new DatabaseException("Categoria com o id: " + id + " não pode ser apagada, pois ainda possuem produtos cadastrados com essa categoria!");
+			throw new DatabaseException("Cliente com o id: " + id + " não pode ser apagado, pois a deleção pode criar inconsistência no banco!");
 		}
 	}
 
-	@Transactional(readOnly = true)
-	public Page<ClientDTO> findAllPaged(PageRequest pageRequest) {
-		Page<Client> list = repository.findAll(pageRequest);
-		return list.map(x -> new ClientDTO(x));
+	private void copyDtoToEntity(ClientDTO dto, Client entity) {
+		entity.setName(dto.getName());
+		entity.setBirthDate(dto.getBirthDate());
+		entity.setChildren(dto.getChildren());
+		entity.setCpf(dto.getCpf());
+		entity.setIncome(dto.getIncome());
 	}
 }
